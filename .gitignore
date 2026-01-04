@@ -43,3 +43,6 @@ pillow-layer.zip
 # OS
 .DS_Store
 Thumbs.db
+
+#Images
+*.jpg
