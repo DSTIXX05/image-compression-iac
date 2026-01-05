@@ -46,3 +46,13 @@ Thumbs.db
 
 #Images
 *.jpg
+
+pillow*
+
+# Docker build artifacts
+docker-compose.override.yml
+
+# Credentials
+*.pem
+*.key
+*.pub

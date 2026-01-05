@@ -1,9 +1,11 @@
 resource "aws_s3_bucket" "source_bucket" {
-  bucket = "delightsome-original-images-bucket"
+  bucket        = "delightsome-original-images-bucket"
+  force_destroy = true
 }
 
 resource "aws_s3_bucket" "destination_bucket" {
-  bucket = "delightsome-compressed-images-bucket"
+  bucket        = "delightsome-compressed-images-bucket"
+  force_destroy = true
 }
 
 resource "aws_iam_role" "lambda_role" {
@@ -68,8 +70,8 @@ data "archive_file" "lambda_zip" {
 }
 
 resource "aws_lambda_layer_version" "pillow_layer" {
-  filename   = "pillow-layer.zip"
-  layer_name = "pillow-python310"
+  filename         = "pillow-layer.zip"
+  layer_name       = "pillow-python310"
   source_code_hash = filebase64sha256("pillow-layer.zip")
 
   compatible_runtimes = ["python3.10"]
