@@ -3,6 +3,11 @@ resource "aws_s3_bucket" "source_bucket" {
   force_destroy = true
 }
 
+resource "aws_s3_bucket" "failed_bucket" {
+  bucket        = "delightsome-failed-images-bucket"
+  force_destroy = true
+}
+
 resource "aws_s3_bucket" "destination_bucket" {
   bucket        = "delightsome-compressed-images-bucket"
   force_destroy = true
@@ -20,6 +25,10 @@ resource "aws_iam_role" "lambda_role" {
       Action = "sts:AssumeRole"
     }]
   })
+}
+
+resource "aws_sns_topic" "image_compression_notifications" {
+  name = "image-compression-notifications"
 }
 
 resource "aws_iam_policy" "lambda_policy" {
@@ -40,19 +49,27 @@ resource "aws_iam_policy" "lambda_policy" {
         Action = [
           "s3:PutObject"
         ]
-        Resource = "${aws_s3_bucket.destination_bucket.arn}/*"
+        Resource = [
+          "${aws_s3_bucket.destination_bucket.arn}/*",
+          "${aws_s3_bucket.failed_bucket.arn}/*"
+        ]
       },
       {
-        Effect = "Allow",
+        Effect = "Allow"
+        Action = [
+          "sns:Publish"
+        ]
+        Resource = aws_sns_topic.image_compression_notifications.arn
+      },
+      {
+        Effect = "Allow"
         Action = [
           "logs:CreateLogGroup",
           "logs:CreateLogStream",
           "logs:PutLogEvents"
-
         ]
         Resource = "*"
       }
-
     ]
   })
 }
@@ -90,11 +107,11 @@ resource "aws_lambda_function" "image_compressor" {
 
   environment {
     variables = {
-      DEST_BUCKET = aws_s3_bucket.destination_bucket.bucket
+      DEST_BUCKET   = aws_s3_bucket.destination_bucket.bucket
+      FAILED_BUCKET = aws_s3_bucket.failed_bucket.bucket
+      SNS_TOPIC_ARN = aws_sns_topic.image_compression_notifications.arn
     }
   }
-
-  depends_on = [aws_iam_role_policy_attachment.lambda_attach]
 }
 
 resource "aws_lambda_permission" "allow_s3" {
@@ -116,3 +133,10 @@ resource "aws_s3_bucket_notification" "s3_notification" {
 
   depends_on = [aws_lambda_permission.allow_s3]
 }
+
+resource "aws_sns_topic_subscription" "admin_email" {
+  topic_arn = aws_sns_topic.image_compression_notifications.arn
+  protocol  = "email"
+  endpoint  = var.admin_email
+}
+
