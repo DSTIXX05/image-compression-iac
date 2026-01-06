@@ -57,3 +57,5 @@ docker-compose.override.yml
 *.key
 *.pub
 *.drawio
+
+.env.example
