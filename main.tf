@@ -1,3 +1,4 @@
+//S3
 resource "aws_s3_bucket" "source_bucket" {
   bucket        = "delightsome-original-images-bucket"
   force_destroy = true
@@ -13,6 +14,7 @@ resource "aws_s3_bucket" "destination_bucket" {
   force_destroy = true
 }
 
+//Lambda
 resource "aws_iam_role" "lambda_role" {
   name = "image_compressor_lambda_role"
   assume_role_policy = jsonencode({
@@ -25,10 +27,6 @@ resource "aws_iam_role" "lambda_role" {
       Action = "sts:AssumeRole"
     }]
   })
-}
-
-resource "aws_sns_topic" "image_compression_notifications" {
-  name = "image-compression-notifications"
 }
 
 resource "aws_iam_policy" "lambda_policy" {
@@ -83,14 +81,13 @@ data "archive_file" "lambda_zip" {
   type        = "zip"
   source_dir  = "${path.module}/lambda"
   output_path = "${path.module}/lambda.zip"
-  excludes    = ["PIL", "pillow-11.3.0.dist-info", "__pycache__", "*.jpg"]
+  excludes    = ["PIL", "pillow-*.dist-info", "__pycache__", "*.jpg"]
 }
 
 resource "aws_lambda_layer_version" "pillow_layer" {
   filename         = "pillow-layer.zip"
   layer_name       = "pillow-python310"
   source_code_hash = filebase64sha256("pillow-layer.zip")
-
   compatible_runtimes = ["python3.10"]
 }
 
@@ -132,6 +129,11 @@ resource "aws_s3_bucket_notification" "s3_notification" {
   }
 
   depends_on = [aws_lambda_permission.allow_s3]
+}
+
+//SNS
+resource "aws_sns_topic" "image_compression_notifications" {
+  name = "image-compression-notifications"
 }
 
 resource "aws_sns_topic_subscription" "admin_email" {
